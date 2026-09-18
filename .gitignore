@@ -1,0 +1,22 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Virtual Environments
+venv/
+.venv/
+ENV/
+
+# Dependencies & Build Folders
+node_modules/
+.expo/
+dist/
+build/
+
+# IDE & Settings
+.idea/
+.vscode/
+*.iml
+
+# Environment Variables & Logs
+.env
+*.log
