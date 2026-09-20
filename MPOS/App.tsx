@@ -1,27 +1,24 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Alert, KeyboardAvoidingView, Platform, ImageBackground, TouchableOpacity, Image } from 'react-native';
 import { TextInput, Button, Text, PaperProvider } from 'react-native-paper';
+import { API_BASE_URL } from './config';
 import axios from 'axios';
-
-const API_BASE_URL: string = Platform.OS === 'android' 
-  ? 'http://10.0.2.2:8000' 
-  : 'http://localhost:8000';
 
 export default function App() {
 
   const isMobileNative = Platform.OS === 'ios' || Platform.OS === 'android';
   const isElectron = Platform.OS === 'web';
-  const [email, setEmail] = useState<string>('');
+  const [email, setEmail] = useState('');
   const [isLoginHovered, setIsLoginHovered] = useState(false);
-  const [password, setPassword] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const LoginWebHover = Platform.OS === 'web' ? {
     onMouseEnter: () => setIsLoginHovered(true),
     onMouseLeave: () => setIsLoginHovered(false),
   } : {};
 
-  const handleLogin = async (): Promise<void> => {
+  const handleLogin = async ()=> {
     if (!email || !password) {
       if(isElectron){
         window.alert(`${'Validation Error'}\n\n${'Please enter username and password'}`);
@@ -31,22 +28,31 @@ export default function App() {
       }
       return;
     }
-
     setLoading(true);
-
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/login`, {
-        username: email,
-        password: password,
-      });
-
-      setLoading(false);
-      Alert.alert('Success', `Logged in! Token: ${response.data.access_token}`);
-    } catch (error: any) {
-      setLoading(false);
+    await axios.post(`${API_BASE_URL}/api/v1/auth/login`, {email: email,password: password,}).then((response)=>{
+      if(response.data?.Authenticated === true){
+        if(isElectron){
+          window.alert('Login Success')
+        }
+        else{
+          Alert.alert('Success', 'Logged in!');
+        }
+      }
+      else{
+        if(isElectron){
+          window.alert('Invalid Credentials')
+        }
+        else{
+          Alert.alert('Invalid Credentials', 'Please Enter Valid Username or Password!!!');
+        }
+      }
+    }).catch ((error) => {
+      console.error('Axios Error Object:', error);
       const errorMessage = error.response?.data?.detail || 'Cannot connect to server';
       Alert.alert('Login Failed', errorMessage);
-    }
+    }).finally(()=>{
+      setLoading(false);
+    })
   };
 
   return (
@@ -78,19 +84,28 @@ export default function App() {
           resizeMode="contain"
         >
         {Platform.OS === 'android' || Platform.OS === 'ios' ? (
-          <Image
-            source={require('./icons/MPOS_Logo_Black_Final.png')}
-            resizeMode="contain"
-            style={{
-              position: 'absolute',
-              top: 24,
-              left: 24,
-              zIndex: 1000,
-              height: 120,
-              width: 100,
-              backgroundColor: '#000000',
-            }}
-          />
+          <View style={{
+                position: 'absolute',
+                top: 24,
+                left: 24,
+                zIndex: 1000,
+                height: 80,
+                width: 100,
+                backgroundColor: '#000',
+                borderStyle: 'solid',
+                borderBottomWidth: 3,
+                borderColor: '#ffffff'
+          }}>
+            <Image
+              source={require('./icons/MPOS_Logo_Black_Final.png')}
+              resizeMode="contain"
+              style={{
+                height: 80,
+                width: 100,
+                backgroundColor: 'transparent',
+              }}
+            />
+          </View>
         ) : null}
         <View style={{
           flex: 1,
@@ -148,6 +163,7 @@ export default function App() {
           <TextInput
             placeholder='Password'
             placeholderTextColor='#f0f0f0'
+            secureTextEntry
             textColor='#f0f0f0'
             value={password}
             onChangeText={(text: string) => setPassword(text)}
