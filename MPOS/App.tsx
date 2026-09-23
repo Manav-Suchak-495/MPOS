@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Alert, KeyboardAvoidingView, Platform, ImageBackground, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, View, Alert, KeyboardAvoidingView, Platform, ImageBackground, TouchableOpacity, Image, Pressable } from 'react-native';
 import { TextInput, Button, Text, PaperProvider } from 'react-native-paper';
 import { API_BASE_URL } from './config';
 import axios from 'axios';
+import CustomDialog from './customdialog';
+import ForgotPasswordDialog from './ForgotPasswordDialog';
 
 export default function App() {
 
@@ -12,6 +14,7 @@ export default function App() {
   const [isLoginHovered, setIsLoginHovered] = useState(false);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotPasswordDialog, setForgotPasswordDiallog] = useState(false);
 
   const LoginWebHover = Platform.OS === 'web' ? {
     onMouseEnter: () => setIsLoginHovered(true),
@@ -83,31 +86,8 @@ export default function App() {
           }}
           resizeMode="contain"
         >
-        {Platform.OS === 'android' || Platform.OS === 'ios' ? (
-          <View style={{
-                position: 'absolute',
-                top: 24,
-                left: 24,
-                zIndex: 1000,
-                height: 80,
-                width: 100,
-                backgroundColor: '#000',
-                borderStyle: 'solid',
-                borderBottomWidth: 3,
-                borderColor: '#ffffff'
-          }}>
-            <Image
-              source={require('./icons/MPOS_Logo_Black_Final.png')}
-              resizeMode="contain"
-              style={{
-                height: 80,
-                width: 100,
-                backgroundColor: 'transparent',
-              }}
-            />
-          </View>
-        ) : null}
         <View style={{
+          display : forgotPasswordDialog ? 'none' : undefined,
           flex: 1,
           justifyContent: 'center',
           alignItems: isElectron ? 'center' : 'stretch',
@@ -187,8 +167,7 @@ export default function App() {
 
           <TouchableOpacity
             onPress={() => {
-              // Handle navigation or alert here
-              console.log('Navigate to Forgot Password');
+              setForgotPasswordDiallog(true)
             }}
             activeOpacity={0.7}
           >
@@ -202,37 +181,46 @@ export default function App() {
               Forgot Password?
             </Text>
           </TouchableOpacity>
-          <Button 
-            mode="contained" 
-            onPress={handleLogin} 
-            loading={loading}
-            textColor='#ffffff'
+          <Pressable
+            onPress={() => handleLogin()}
             {...(LoginWebHover as any)}
-            labelStyle={{
-              margin: 6,
-              fontSize: isElectron ? 15 : 19,
+            android_ripple={{
+              color: '#811ccf',
+              borderless: false
             }}
-            style={{
-              height : isElectron ? undefined : 50,
-              width: '100%',
-              elevation: 6,
-              marginTop: isElectron ? 40 : 50,
-              paddingVertical: 4,
-              borderRadius: 10,
-              backgroundColor: '#660eca',
-              borderColor: '#fff',
-              shadowColor: isLoginHovered ? '#000000' : 'transparent',
-              shadowOffset: { width: isLoginHovered ? 4 : 0, height: isLoginHovered ? 3 : 0 },
-              shadowOpacity: 0.4,
-              shadowRadius: 5,
-            }}
+            style={({ pressed }) => [{
+                    height : isElectron ? undefined : 50,
+                    width: '100%',
+                    elevation: 6,
+                    marginTop: isElectron ? 40 : 50,
+                    paddingVertical: 4,
+                    borderRadius: 10,
+                    backgroundColor: '#660eca',
+                    borderColor: '#fff',
+                    shadowColor: isLoginHovered ? '#2d2d2d' : 'transparent',
+                    shadowOffset: { width: isLoginHovered ? 4 : 0, height: isLoginHovered ? 3 : 0 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 5,
+                    overflow: 'hidden'
+            },
+              pressed && Platform.OS === 'ios' && { backgroundColor: '#811ccf' },
+            ]}
             theme={{
               colors: { elevation: { level1: 'transparent' } }
-            }}
-          >
-            Login
-          </Button>
+            }}>
+            <Text style={{
+              color: '#ffffff',
+              fontWeight: Platform.OS == 'web' ? '400' : '600',
+              margin: 6,
+              fontSize: isElectron ? 15 : 19,
+              textAlign: 'center'
+            }}>Login</Text>
+          </Pressable>
         </View>
+        {forgotPasswordDialog && <ForgotPasswordDialog
+          forgotPasswordDialog = {forgotPasswordDialog} 
+          setForgotPasswordDialog={setForgotPasswordDiallog} 
+          setUserEmail={setEmail}/>}
         </ImageBackground>
       </KeyboardAvoidingView>
     </PaperProvider>
