@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Platform, Pressable, Text, TouchableOpacity, View, ViewStyle, type TextInput as TextInputType } from "react-native";
 import { TextInput } from "react-native-paper";
 import { TouchableWithoutFeedback } from "react-native";
+import * as SecureStore from 'expo-secure-store';
 
 interface ForgotPasswordDialogInterface {
     forgotPasswordDialog: boolean;
@@ -66,10 +67,26 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
                 const response = await axios.post(`${API_BASE_URL}/api/v1/auth/verify-otp`, {"email": user_email, "otp": otp, 'isSignUp' : isSignUp});
                 if(response.data?.Authenticated === true && isForgotPassword === false){
                     if(isElectron){
-                        window.alert('OTP Verified Successfully');
-                    }
-                    else{
-                        Alert.alert('Success', 'OTP Verified Successfully');
+                        if (window.electronAPI) {
+                            try {
+                                const encrypted = await window.electronAPI.encryptToken(response.data?.ShortToken);
+                                localStorage.setItem('ShortToken', encrypted);
+                                window.alert('Token Saved');
+                            } catch (error) {
+                                console.error('Failed to encrypt token via Electron:', error);
+                            }
+                        } else {
+                            localStorage.setItem('ShortToken', response.data?.ShortToken);
+                            window.alert('Token Saved');
+                        }
+                    } 
+                    else {
+                        try {
+                        await SecureStore.setItemAsync('ShortToken', response.data?.ShortToken);
+                        Alert.alert('Token Saved');
+                        } catch (error) {
+                        console.error('Failed to save token in SecureStore:', error);
+                        }
                     }
                 }
                 else{
