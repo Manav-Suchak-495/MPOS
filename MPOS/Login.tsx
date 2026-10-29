@@ -271,13 +271,13 @@ const Login = ({forgotPasswordDialog, setForgotPasswordDialog, isForgotPassword,
             color: '#ff5424',
             fontSize: 15,
             fontWeight: 700,
-            }}><br/>Powered by Instant AI Insights.</Text>
+            }}>Powered by Instant AI Insights.</Text>
             <Text style={{
             color: '#000000',
             fontSize: 15,
             fontWeight: 600,
             textAlign: 'justify'
-            }}><br/>Run your counter Effortlessly and Track every stock move with real-time intelligence.</Text>
+            }}>Run your counter Effortlessly and Track every stock move with real-time intelligence.</Text>
           </View>
         </View>)}
 

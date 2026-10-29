@@ -228,7 +228,7 @@ async def verify_otp(payload: VerifyOtpRequest, response: Response, db: psycopg.
                     )
     user_id = await r.get(f"{email}:user_id")
     short_token = create_jwt_token(email, user_id=user_id, business_id='', short_login=True, long_login=False)
-    return {"Authenticated": True, "message": "OTP verified successfully", "ShortToken": short_token}
+    return {"Authenticated": True, "ShortToken": short_token, "user_id": user_id}
 
 @app.post("/api/v1/users/get-my-profile")
 async def get_my_profile(payload: GetProfileRequest, db: psycopg.AsyncConnection = Depends(get_db_connection)):

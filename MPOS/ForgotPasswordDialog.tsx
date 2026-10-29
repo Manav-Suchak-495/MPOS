@@ -5,6 +5,7 @@ import { Alert, Modal, Platform, Pressable, Text, TouchableOpacity, View, ViewSt
 import { TextInput } from "react-native-paper";
 import { TouchableWithoutFeedback } from "react-native";
 import * as SecureStore from 'expo-secure-store';
+import * as Keychain from 'react-native-keychain';
 
 interface ForgotPasswordDialogInterface {
     forgotPasswordDialog: boolean;
@@ -27,6 +28,10 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
     const [isForgotHovered, setIsForgotHovered] = useState(false);
     const textRef = useRef<React.ComponentRef<typeof TextInputType>>(null)
 
+    async function saveToken(userId: string, token: string): Promise<void> {
+    await Keychain.setGenericPassword(userId, token);
+    }
+
     const BackWebHover = Platform.OS === 'web' ? {
         onMouseEnter: () => setIsBackHovered(true),
         onMouseLeave: () => setIsBackHovered(false),
@@ -46,10 +51,6 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
             return() => { clearTimeout(timer) }
         }
     }, [])
-
-    const handleBlur = () => {
-        textRef.current?.focus();
-    };
 
     const handleSendOTP = async () => {
         if(isOtpVerification){
@@ -71,13 +72,13 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
                             try {
                                 const encrypted = await window.electronAPI.encryptToken(response.data?.ShortToken);
                                 localStorage.setItem('ShortToken', encrypted);
-                                window.alert('Token Saved');
+                                window.alert('Windows Token Saved');
                             } catch (error) {
                                 console.error('Failed to encrypt token via Electron:', error);
                             }
                         } else {
-                            localStorage.setItem('ShortToken', response.data?.ShortToken);
-                            window.alert('Token Saved');
+                            saveToken(response.data?.user_id, response.data?.ShortToken)
+                            window.alert('Mac Token Saved');
                         }
                     } 
                     else {
