@@ -28,8 +28,8 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
     const [isForgotHovered, setIsForgotHovered] = useState(false);
     const textRef = useRef<React.ComponentRef<typeof TextInputType>>(null)
 
-    async function saveToken(userId: string, token: string): Promise<void> {
-    await Keychain.setGenericPassword(userId, token);
+    async function saveToken(TokenKey: string, token: string): Promise<void> {
+    await Keychain.setGenericPassword(TokenKey, token);
     }
 
     const BackWebHover = Platform.OS === 'web' ? {
@@ -70,21 +70,25 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
                     if(isElectron){
                         if (window.electronAPI) {
                             try {
-                                const encrypted = await window.electronAPI.encryptToken(response.data?.ShortToken);
-                                localStorage.setItem('ShortToken', encrypted);
-                                window.alert('Windows Token Saved');
+                                const short_encrypted = await window.electronAPI.encryptToken(response.data?.ShortToken);
+                                const long_encrypted = await window.electronAPI.encryptToken(response.data?.LongToken);
+                                localStorage.setItem('ShortToken', short_encrypted);
+                                localStorage.setItem('LongToken', long_encrypted);
+                                setForgotPasswordDialog(false);
                             } catch (error) {
                                 console.error('Failed to encrypt token via Electron:', error);
                             }
                         } else {
-                            saveToken(response.data?.user_id, response.data?.ShortToken)
-                            window.alert('Mac Token Saved');
+                            saveToken('ShortToken', response.data?.ShortToken);
+                            saveToken('LongToken', response.data?.LongToken);
+                            setForgotPasswordDialog(false);
                         }
                     } 
                     else {
                         try {
                         await SecureStore.setItemAsync('ShortToken', response.data?.ShortToken);
-                        Alert.alert('Token Saved');
+                        await SecureStore.setItemAsync('LongToken', response.data?.LongToken);
+                        setForgotPasswordDialog(false);
                         } catch (error) {
                         console.error('Failed to save token in SecureStore:', error);
                         }
@@ -115,6 +119,34 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
                 return;
             }
             setLoading(true);
+            try{
+            const response = await axios.post(`${API_BASE_URL}/api/v1/auth/send-otp`, {"email": email, 'isSignUp' : isSignUp});
+            if(response.data?.OtpSent === true){
+                setUserEmail(email);
+                setIsOtpVerification(true);
+            }
+            else{
+                if(Platform.OS == 'web'){
+                    window.alert(`${'Error'}\n\n${'OTP not sent, please try again later'}`);
+                }
+                else{
+                    Alert.alert('Error', 'OTP not sent, please try again later.');
+                }
+            }
+        }
+        catch(error: unknown){
+            console.error('Axios Error Object:', error);
+            setLoading(false);
+            if(Platform.OS == 'web'){
+                window.alert(`${'Error'}\n\n${'OTP not sent, please try again later'}`);
+            }
+            else{
+                Alert.alert('Error', 'OTP not sent, please try again later.');
+            }
+        }
+        finally{
+            setLoading(false);
+        }
         }
     }
 

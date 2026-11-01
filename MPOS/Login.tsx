@@ -57,6 +57,60 @@ const Login = ({forgotPasswordDialog, setForgotPasswordDialog, isForgotPassword,
       }
       return;
     }
+    if(!/^[a-zA-Z\s]+$/.test(signUpName)){
+      if(isElectron){
+        window.alert(`${'Validation Error'}\n\n${'Please Enter Valid Name'}`);
+      }
+      else{
+        Alert.alert('Validation Error', 'Please Enter Valid Name.');
+      }
+      return;
+    }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signUpEmail)){
+      if(isElectron){
+        window.alert(`${'Validation Error'}\n\n${'Please Enter Valid Email Address'}`);
+      }
+      else{
+        Alert.alert('Validation Error', 'Please Enter Valid Email Address.');
+      }
+      return;
+    }
+    if(signUpMobile.length !== 10 || !/^\d+$/.test(signUpMobile)){
+      if(isElectron){
+        window.alert(`${'Validation Error'}\n\n${'Please Enter Valid Mobile Number'}`);
+      }
+      else{
+        Alert.alert('Validation Error', 'Please Enter Valid Mobile Number.');
+      }
+      return;
+    }
+    if(signUpCreatePassword.length < 8){
+      if(isElectron){
+        window.alert(`${'Validation Error'}\n\n${'Password must be at least 8 characters long'}`);
+      }
+      else{
+        Alert.alert('Validation Error', 'Password must be at least 8 characters long.');
+      }
+      return;
+    }
+    if(!/\d/.test(signUpCreatePassword) || !/[!@#$%^&*(),.?":{}|<>]/.test(signUpCreatePassword) || !/[A-Z]/.test(signUpCreatePassword) || !/[a-z]/.test(signUpCreatePassword)){
+      if(isElectron){
+        window.alert(`${'Validation Error'}\n\n${'Password must contain at least one of each: number, special character, uppercase letter, and lowercase letter'}`);
+      }
+      else{
+        Alert.alert('Validation Error', 'Password must contain at least one of each: number, special character, uppercase letter, and lowercase letter.');
+      }
+      return;
+    }
+    if(signUpCreatePassword !== signUpConfirmPassword){
+      if(isElectron){
+        window.alert(`${'Validation Error'}\n\n${'Passwords do not match'}`);
+      }
+      else{
+        Alert.alert('Validation Error', 'Passwords do not match.');
+      }
+      return;
+    }
     setLoading(true);
     try{
       const response = await axios.post(`${API_BASE_URL}/api/v1/auth/signupotpverify`, {name: signUpName, email: signUpEmail, mobile: signUpMobile, password: signUpConfirmPassword,});

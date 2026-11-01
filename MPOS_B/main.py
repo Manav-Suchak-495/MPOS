@@ -35,6 +35,10 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class SendOtpRequest(BaseModel):
+    isSignUp: bool
+    email: EmailStr
+
 class VerifyOtpRequest(BaseModel):
     isSignUp: bool
     email: EmailStr
@@ -158,15 +162,15 @@ async def SignUp(name, email, mobile, password,db: psycopg.AsyncConnection):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post('/api/v1/auth/send-otp')
-async def send_otp_api(payload: LoginRequest, background_tasks: BackgroundTasks, db: psycopg.AsyncConnection = Depends(get_db_connection)):
+async def send_otp_api(payload: SendOtpRequest, background_tasks: BackgroundTasks, db: psycopg.AsyncConnection = Depends(get_db_connection)):
     otp = generate_otp()
     email = payload.email.lower().strip()
-    if r.exists(f"{payload.email.lower().strip()}"):
+    if await r.exists(f"{payload.email.lower().strip()}"):
         await r.setex(f"otp:{email}", timedelta(minutes=5), otp)
     else:
         try:
             async with db.cursor() as cursor:
-                await cursor.execute("SELECT user_id, user_name FROM user_data WHERE user_email=%s", (email,))
+                await cursor.execute("SELECT user_id, user_name, user_mobile FROM user_data WHERE user_email=%s", (email,))
                 user = await cursor.fetchone()
         except Exception as e:
             print(f"Error occurred while fetching user data: {e}")
@@ -185,7 +189,7 @@ async def send_otp_api(payload: LoginRequest, background_tasks: BackgroundTasks,
             )
     background_tasks.add_task(send_otp, email=email, otp=otp)
     await r.setex(f"otp:{email}", timedelta(minutes=5), otp)
-    return {"message": "OTP sent successfully"}
+    return {"OtpSent": True}
 
     
 
@@ -227,8 +231,8 @@ async def verify_otp(payload: VerifyOtpRequest, response: Response, db: psycopg.
                         detail="Error in Fetching User"
                     )
     user_id = await r.get(f"{email}:user_id")
-    short_token = create_jwt_token(email, user_id=user_id, business_id='', short_login=True, long_login=False)
-    return {"Authenticated": True, "ShortToken": short_token, "user_id": user_id}
+    long_token, short_token = create_jwt_token(email, user_id=user_id, short_login=True, long_login=True)
+    return {"Authenticated": True, "ShortToken": short_token, "LongToken": long_token, "user_id": user_id}
 
 @app.post("/api/v1/users/get-my-profile")
 async def get_my_profile(payload: GetProfileRequest, db: psycopg.AsyncConnection = Depends(get_db_connection)):
@@ -286,14 +290,13 @@ def send_otp(email: str, otp: str):
     except Exception as e:
         print(f"Otp send failed: {e}")
 
-def create_jwt_token(user_email: str, user_id: str, business_id: str, short_login: bool = False, long_login: bool = False):
+def create_jwt_token(user_email: str, user_id: str, short_login: bool = False, long_login: bool = False):
     if long_login :
         payload_l = {
                 "sub": user_id,
                 "email": user_email,
                 "exp": datetime.now(timezone.utc) + timedelta(days=7),
                 "iat": datetime.now(timezone.utc),
-                "business_id": business_id
             }
         long_token = jwt.encode(payload_l, SECRET_KEY, algorithm=ALGORITHM)
         payload_s = {
@@ -301,7 +304,6 @@ def create_jwt_token(user_email: str, user_id: str, business_id: str, short_logi
                 "email": user_email,
                 "exp": datetime.now(timezone.utc) + timedelta(hours=1),
                 "iat": datetime.now(timezone.utc),
-                "business_id": business_id
             }
         short_token = jwt.encode(payload_s, SECRET_KEY, algorithm=ALGORITHM)
         return long_token, short_token
@@ -311,7 +313,6 @@ def create_jwt_token(user_email: str, user_id: str, business_id: str, short_logi
                 "email": user_email,
                 "exp": datetime.now(timezone.utc) + timedelta(hours=1),
                 "iat": datetime.now(timezone.utc),
-                "business_id": business_id
             }
         short_token = jwt.encode(payload_s, SECRET_KEY, algorithm=ALGORITHM)
         return short_token
