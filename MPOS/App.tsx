@@ -6,6 +6,7 @@ import axios from 'axios';
 import LoadingOverlay from './LoadingOverlay';
 import ForgotPasswordDialog from './ForgotPasswordDialog';
 import Login from './Login'
+import PinVerification from './PinVerification';
 
 export default function App() {
 
@@ -30,6 +31,12 @@ export default function App() {
           justifyContent: 'center',
         }}
       >
+        <PinVerification
+          correctPin="123456"
+          onSuccess={() => {
+            Alert.alert('PIN Verified', 'You have successfully entered the correct PIN.');
+          }}
+        />
           <Login 
           user_email={user_email}
           setUserEmail={setUserEmail}
