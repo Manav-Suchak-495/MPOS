@@ -20,8 +20,10 @@ interface ForgotPasswordDialogInterface {
     isOtpVerification: boolean;
     setIsOtpVerification: (args: boolean) => void;
     isSignUp: boolean;
+    setIsPinCheck: (args: boolean) => void;
+    setIsPinVerification: (args: boolean) => void;
 }
-const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, isForgotPassword, setIsForgotPassword, user_email, setUserEmail, API_BASE_URL, setLoading, isElectron, isOtpVerification, setIsOtpVerification, isSignUp} : ForgotPasswordDialogInterface )=>{
+const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, isForgotPassword, setIsForgotPassword, user_email, setUserEmail, API_BASE_URL, setLoading, isElectron, isOtpVerification, setIsOtpVerification, isSignUp, setIsPinCheck, setIsPinVerification} : ForgotPasswordDialogInterface )=>{
     const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [isBackHovered, setIsBackHovered] = useState(false);
@@ -43,6 +45,9 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
       } : {};
     
     useEffect(()=>{
+        if(isOtpVerification){
+            setEmail(user_email);
+        }
         if(Platform.OS != 'web'){
             const timer = setTimeout(()=>{
                 textRef.current?.focus();
@@ -67,6 +72,14 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
             try {
                 const response = await axios.post(`${API_BASE_URL}/api/v1/auth/verify-otp`, {"email": user_email, "otp": otp, 'isSignUp' : isSignUp});
                 if(response.data?.Authenticated === true && isForgotPassword === false){
+                    if(response.data?.isPinAvailable === true){
+                        setIsPinCheck(false)
+                        setIsPinVerification(false)
+                    }
+                    else{
+                        setIsPinCheck(true)
+                        setIsPinVerification(true)
+                    }
                     if(isElectron){
                         if (window.electronAPI) {
                             try {
@@ -74,14 +87,12 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
                                 const long_encrypted = await window.electronAPI.encryptToken(response.data?.LongToken);
                                 localStorage.setItem('ShortToken', short_encrypted);
                                 localStorage.setItem('LongToken', long_encrypted);
-                                setForgotPasswordDialog(false);
                             } catch (error) {
                                 console.error('Failed to encrypt token via Electron:', error);
                             }
                         } else {
                             saveToken('ShortToken', response.data?.ShortToken);
                             saveToken('LongToken', response.data?.LongToken);
-                            setForgotPasswordDialog(false);
                         }
                     } 
                     else {
@@ -90,7 +101,7 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
                         await SecureStore.setItemAsync('LongToken', response.data?.LongToken);
                         setForgotPasswordDialog(false);
                         } catch (error) {
-                        console.error('Failed to save token in SecureStore:', error);
+                            console.error('Failed to save token in SecureStore:', error);
                         }
                     }
                 }
@@ -147,6 +158,38 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
         finally{
             setLoading(false);
         }
+        }
+    }
+    const resendOTP = async () => {
+        setLoading(true);
+        console.log('email' + email);
+        try{
+            const response = await axios.post(`${API_BASE_URL}/api/v1/auth/send-otp`, {"email": email, 'isSignUp' : isSignUp});
+            if(response.data?.OtpSent === true){
+                setUserEmail(email);
+                setIsOtpVerification(true);
+            }
+            else{
+                if(Platform.OS == 'web'){
+                    window.alert(`${'Error'}\n\n${'OTP not sent, please try again later'}`);
+                }
+                else{
+                    Alert.alert('Error', 'OTP not sent, please try again later.');
+                }
+            }
+        }
+        catch(error: unknown){
+            console.error('Axios Error Object:', error);
+            setLoading(false);
+            if(Platform.OS == 'web'){
+                window.alert(`${'Error'}\n\n${'OTP not sent, please try again later'}`);
+            }
+            else{
+                Alert.alert('Error', 'OTP not sent, please try again later.');
+            }
+        }
+        finally{
+            setLoading(false);
         }
     }
 
@@ -302,14 +345,15 @@ const ForgotPasswordDialog = ({forgotPasswordDialog, setForgotPasswordDialog, is
                                 />
                                 {isOtpVerification && (<TouchableOpacity
                                     onPress={() => {
-                                        
+                                        resendOTP()
                                     }}
                                     activeOpacity={0.7}
                                 >
                                     <Text style={{
                                         fontSize: Platform.OS == 'web' ? 13 : 17,
+                                        fontWeight: '600',
                                         width: Platform.OS == 'web' ? 'auto' : undefined,
-                                        color: '#ffffff',
+                                        color: '#000000',
                                         textAlign: 'right',
                                         marginRight: Platform.OS == 'web' ? 6 : 9,
                                         marginTop: 6

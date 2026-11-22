@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Alert, KeyboardAvoidingView, Platform, ImageBackground, TouchableOpacity, Image, Pressable } from 'react-native';
 import { TextInput, Button, Text, PaperProvider } from 'react-native-paper';
 import { API_BASE_URL } from './config';
@@ -7,6 +7,8 @@ import LoadingOverlay from './LoadingOverlay';
 import ForgotPasswordDialog from './ForgotPasswordDialog';
 import Login from './Login'
 import PinVerification from './PinVerification';
+import * as SecureStore from 'expo-secure-store';
+import * as Keychain from 'react-native-keychain';
 
 export default function App() {
 
@@ -14,10 +16,80 @@ export default function App() {
   const [user_email, setUserEmail] = useState('');
   const isElectron = Platform.OS === 'web';
   const [isLoading, setIsLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [forgotPasswordDialog, setForgotPasswordDialog] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isOtpVerification, setIsOtpVerification] = useState(false);
+  const [isPinVerification, setIsPinVerification] = useState(false);
+  const [isPinCheck, setIsPinCheck] = useState(false);
+
+  async function getToken(TokenKey: string): Promise<string | null> {
+    const credentials = await Keychain.getGenericPassword({service: TokenKey});
+    if (credentials) {
+        return credentials.password;
+    }
+    return null;
+  }
+  
+  const checkToken = async () => {
+      if(isElectron) {
+        if(window.electronAPI){
+          try {
+              if(!localStorage.getItem('LongToken')) {
+                setIsLogin(true)
+                setIsPinVerification(false)
+                return;
+              }
+              if (!localStorage.getItem('ShortToken')) {
+                setIsPinVerification(true);
+                return;
+              }
+          } catch (error) {
+              console.error('Failed to encrypt fetch token:', error);
+              setIsPinVerification(false)
+              setIsLogin(true)
+          }
+        }
+        else{
+          try {
+            if(getToken('LongToken') === null) {
+              setIsPinVerification(false)
+              setIsLogin(true)
+              return;
+            }
+            if (getToken('ShortToken') === null) {
+              setIsPinVerification(true);
+              return;
+            }
+          } catch (error) {
+            console.error('Failed to encrypt fetch token:', error);
+            setIsLogin(true)
+          }
+        }
+      }
+      else{
+        try{
+          if(await SecureStore.getItemAsync('ShortToken') === null) {
+            setIsPinVerification(false)
+            setIsLogin(true)
+            return;
+          }
+          if(await SecureStore.getItemAsync('LongToken') === null) {
+            setIsPinVerification(true);
+            return;
+          }
+        }
+        catch(error) {
+            console.error('Failed to encrypt fetch token:', error);
+            setIsLogin(true)
+        }
+      }
+    }
+  useEffect(() => {
+      checkToken();
+    }, []);
+  
 
   return (
     <PaperProvider>
@@ -31,12 +103,15 @@ export default function App() {
           justifyContent: 'center',
         }}
       >
-        <PinVerification
-          correctPin="123456"
-          onSuccess={() => {
-            Alert.alert('PIN Verified', 'You have successfully entered the correct PIN.');
-          }}
-        />
+        {isPinVerification && (
+          <PinVerification
+            isPinCheck={isPinCheck}
+            correctPin="123456"
+            onSuccess={() => {
+              Alert.alert('PIN Verified', 'You have successfully entered the correct PIN.');
+            }}
+          />
+        )}
           <Login 
           user_email={user_email}
           setUserEmail={setUserEmail}
@@ -50,7 +125,9 @@ export default function App() {
           isOtpVerification={isOtpVerification}
           setIsOtpVerification={setIsOtpVerification}
           isSignUp = {isSignUp}
-          setIsSignUp = {setIsSignUp}/>
+          setIsSignUp = {setIsSignUp}
+          setIsPinCheck = {setIsPinCheck}
+          />
         
         {forgotPasswordDialog && <ForgotPasswordDialog
           forgotPasswordDialog = {forgotPasswordDialog} 
@@ -64,8 +141,11 @@ export default function App() {
           isElectron = {isElectron}
           isOtpVerification = {isOtpVerification}
           setIsOtpVerification = {setIsOtpVerification} 
-          isSignUp = {isSignUp}/>}
-        
+          isSignUp = {isSignUp}
+          setIsPinCheck = {setIsPinCheck}
+          setIsPinVerification={setIsPinVerification}
+          />}
+
         {isLoading && <LoadingOverlay/>}
       </KeyboardAvoidingView>
     </PaperProvider>

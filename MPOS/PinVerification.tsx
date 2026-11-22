@@ -1,8 +1,14 @@
 import { useRef, useState } from "react";
 import { Modal, Platform, Text, TextInput, TouchableWithoutFeedback, View, type TextInput as TextInputType } from "react-native";
 
+interface PinVerificationProps {
+    correctPin?: string;
+    onSuccess: () => void;
+    isPinCheck: boolean;
+}
+
 const PIN_LENGTH = 6;
-const PinVerification = ({ correctPin = '123456', onSuccess }: { correctPin?: string; onSuccess: () => void }) => {
+const PinVerification = ({ correctPin = '123456', onSuccess, isPinCheck}: PinVerificationProps) => {
 
     const textRef = useRef<React.ComponentRef<typeof TextInputType>>(null)
     const [pin, setPin] = useState(Array(PIN_LENGTH).fill(''));

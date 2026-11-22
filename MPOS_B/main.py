@@ -96,7 +96,10 @@ async def login(payload: LoginRequest, background_tasks: BackgroundTasks, respon
                     await pipe.setex(f"{email}:user_mobile", timedelta(minutes=5), user['user_mobile'])
                     await pipe.execute()
         background_tasks.add_task(send_otp, email=email, otp=otp)
-        return {"isEmailVerified": isVerified}
+        pinCheck = False
+        if user['user_pin'] == '' or user['user_pin'] is None:
+            pinCheck = True
+        return {"isEmailVerified": isVerified, "pinCheck": pinCheck}
 
     except HTTPException:
         raise
@@ -165,8 +168,11 @@ async def SignUp(name, email, mobile, password,db: psycopg.AsyncConnection):
 async def send_otp_api(payload: SendOtpRequest, background_tasks: BackgroundTasks, db: psycopg.AsyncConnection = Depends(get_db_connection)):
     otp = generate_otp()
     email = payload.email.lower().strip()
-    if await r.exists(f"{payload.email.lower().strip()}"):
-        await r.setex(f"otp:{email}", timedelta(minutes=5), otp)
+    if await r.exists(f"{email}"):
+        async with r.pipeline(transaction=True) as pipe:
+                    await pipe.setex(f"otp:{email}", timedelta(minutes=5), otp)
+                    await pipe.setex(f"{email}", timedelta(minutes=5), email)
+                    await pipe.execute()
     else:
         try:
             async with db.cursor() as cursor:
@@ -188,7 +194,6 @@ async def send_otp_api(payload: SendOtpRequest, background_tasks: BackgroundTask
                 detail="Invalid User or Password"
             )
     background_tasks.add_task(send_otp, email=email, otp=otp)
-    await r.setex(f"otp:{email}", timedelta(minutes=5), otp)
     return {"OtpSent": True}
 
     
