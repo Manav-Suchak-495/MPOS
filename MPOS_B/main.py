@@ -236,8 +236,16 @@ async def verify_otp(payload: VerifyOtpRequest, response: Response, db: psycopg.
                         detail="Error in Fetching User"
                     )
     user_id = await r.get(f"{email}:user_id")
+    if user_id == '' or not user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Session Expired, Attempt Login or SignUp Again"
+        )
     long_token, short_token = create_jwt_token(email, user_id=user_id, short_login=True, long_login=True)
-    return {"Authenticated": True, "ShortToken": short_token, "LongToken": long_token, "user_id": user_id}
+    async with db.cursor() as cursor:
+                    await cursor.execute("SELECT (user_pin IS NOT NULL AND BTRIM(user_pin::text) <> '') AS has_user_pin FROM users WHERE user_id = %s;", (user_id,))
+                    user_pin = await cursor.fetchone()['user_pin']
+    return {"Authenticated": True, "ShortToken": short_token, "LongToken": long_token, "user_id": user_id, 'isPinAvailable' : user_pin}
 
 @app.post("/api/v1/users/get-my-profile")
 async def get_my_profile(payload: GetProfileRequest, db: psycopg.AsyncConnection = Depends(get_db_connection)):
