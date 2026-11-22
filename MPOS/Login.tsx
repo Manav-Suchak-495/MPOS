@@ -18,9 +18,10 @@ interface LoginInterface {
   setIsOtpVerification: (args: boolean) => void;
   isSignUp: boolean;
   setIsSignUp: (args: boolean) => void;
+  setIsPinCheck: (args: boolean) => void;
 }
 
-const Login = ({forgotPasswordDialog, setForgotPasswordDialog, isForgotPassword, setIsForgotPassword, API_BASE_URL, isElectron, setLoading, isOtpVerification, setIsOtpVerification, user_email, setUserEmail, isSignUp, setIsSignUp} : LoginInterface) =>{
+const Login = ({forgotPasswordDialog, setForgotPasswordDialog, isForgotPassword, setIsForgotPassword, API_BASE_URL, isElectron, setLoading, isOtpVerification, setIsOtpVerification, user_email, setUserEmail, isSignUp, setIsSignUp, setIsPinCheck} : LoginInterface) =>{
     const [password, setPassword] = useState('');
     const [isLoginHovered, setIsLoginHovered] = useState(false);
     const [isBackLoginHovered, setIsBackLoginHovered] = useState(false);
@@ -170,8 +171,9 @@ const Login = ({forgotPasswordDialog, setForgotPasswordDialog, isForgotPassword,
     try {
     const response = await axios.post(`${API_BASE_URL}/api/v1/auth/login`, {email: user_email,password: password,});
       if(response.data?.isEmailVerified === true){
-          setIsOtpVerification(true);
-          setForgotPasswordDialog(true);
+        setIsOtpVerification(true);
+        setForgotPasswordDialog(true);
+        setIsPinCheck(response.data?.pinCheck);
       }
       else{
         if(isElectron){
@@ -212,7 +214,6 @@ const Login = ({forgotPasswordDialog, setForgotPasswordDialog, isForgotPassword,
 
   return(
     <View style={{
-      //display : forgotPasswordDialog ? 'none' : undefined,
       flex: 1,
       justifyContent: isElectron ? undefined : 'center',
       alignItems: isElectron ? 'center' : 'stretch',
